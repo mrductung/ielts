@@ -248,10 +248,8 @@ function gdiff(txt,it){const T=gnorm(txt).split(' ').filter(Boolean);let best=nu
   const html=T.map(w=>{const k=pool.indexOf(w);if(k>=0){pool.splice(k,1);m++;return`<b class="ok">${esc(w)}</b>`}return`<b class="bad">${esc(w)}</b>`}).join(' ');
   if(!best||m>best.m)best={m,html,miss:tot-m}}
  return best}
-const GP=id=>((me().gram??={})[id]??={ok:{},rounds:0});
-const gdue=g=>{const o=GP(g.id);return!!(o.init&&o.next&&o.next<=Date.now())};
+const gdueN=()=>GC().filter(c=>!c.arch&&(c.next||0)<=Date.now()).length;
 const gdt=t=>new Date(t).toLocaleDateString('vi-VN',{weekday:'long',day:'2-digit',month:'2-digit',year:'numeric',timeZone:TZ});
-const gSched=g=>{const o=GP(g.id);return!o.init?'':gdue(g)?'<div class="mut"><b>Đến hạn ôn</b></div>':`<div class="mut">Ôn lại: ${gdt(o.next)}</div>`};
 /* Đồng hồ 10 giây cho từng câu: bắt đầu khi câu hiện ra, hết giờ thì tính sai, hiện đáp án, sang câu mới rồi quay lại câu này */
 var GT;
 function gTick(){if(V.p!=='gq'||V.done||!V.t0){clearInterval(GT);return}
@@ -260,21 +258,25 @@ function gTick(){if(V.p!=='gq'||V.done||!V.t0){clearInterval(GT);return}
  const b=$('#gtbar');if(b)b.style.width=Math.max(0,100-ms/(GLIM*10))+'%';
  if(ms>=GLIM*1000)gTimeout()}
 function gTimerStart(){clearInterval(GT);V.t0=Date.now();V.left=GLIM;GT=setInterval(gTick,200)}
-function gTimeout(){clearInterval(GT);if(V.done)return;const{it}=gcur();V.re[it.id]=1;V.gave=1;toast('Hết 10 giây ⏱ Xem đáp án rồi sang câu tiếp nhé');gReveal(0)}
-function menu(){const m=me(),n=S().filter(s=>s.status==='pub'&&due(m.prog[s.id])).length+pdueN(),gn=GRAMS().filter(gdue).length;
- return`<h1>Hôm nay bạn muốn học gì?</h1><div class="tiles"><a class="tile" onclick="go('home')"><span>📖</span><b>Vocabulary</b><small>${n?n+' mục đến hạn ôn':'Flashcards · Review · Practice'}</small></a><a class="tile" onclick="go('gram')"><span>✏️</span><b>Grammar</b><small>${gn?'Có cấu trúc đến hạn ôn':'Tự thêm cấu trúc · dịch và nói lại'}</small></a></div>`}
-function gram(){const g=GRAMS()[0],L=GC().filter(c=>!c.arch),e=V.ged,k=Object.keys(GP(g.id).ok).filter(id=>g.items.some(x=>x.id===id)).length;
- return`<h1>Grammar</h1><p class="mut">Tự thêm các cấu trúc câu cần nhớ: mặt trước là câu tiếng Việt, mặt sau là câu tiếng Anh đúng. Khi ôn, bạn xem câu Việt rồi nói hoặc gõ lại bằng tiếng Anh trong 10 giây.</p>
+function gTimeout(){clearInterval(GT);if(V.done)return;const{it}=gcur();gFail(it);V.re[it.id]=1;V.gave=1;toast('Hết 10 giây ⏱ Xem đáp án rồi sang câu tiếp nhé');gReveal(0)}
+function menu(){const m=me(),n=S().filter(s=>s.status==='pub'&&due(m.prog[s.id])).length+pdueN(),gn=gdueN();
+ return`<h1>Hôm nay bạn muốn học gì?</h1><div class="tiles"><a class="tile" onclick="go('home')"><span>📖</span><b>Vocabulary</b><small>${n?n+' mục đến hạn ôn':'Flashcards · Review · Practice'}</small></a><a class="tile" onclick="go('gram')"><span>✏️</span><b>Grammar</b><small>${gn?gn+' cấu trúc đến hạn ôn':'Tự thêm cấu trúc · dịch và nói lại'}</small></a></div>`}
+function gram(){const L=GC().filter(c=>!c.arch),e=V.ged,n=gdueN(),now=Date.now();
+ return`<h1>Grammar</h1><p class="mut">Tự thêm các cấu trúc câu cần nhớ: mặt trước là câu tiếng Việt, mặt sau là câu tiếng Anh đúng. Khi ôn, bạn xem câu Việt rồi nói hoặc gõ lại bằng tiếng Anh trong 10 giây. Mỗi cấu trúc có lịch ôn riêng.</p>
  <div class="card"><label>Mặt trước (tiếng Việt)</label><textarea id="gv" rows="2" placeholder="vd: Tôi thức dậy lúc 6 giờ mỗi sáng."></textarea><label>Mặt sau (tiếng Anh)</label><textarea id="ge" rows="2" placeholder="vd: I wake up at 6 every morning."></textarea><p class="mut">Máy so câu bạn nói hoặc gõ với đúng câu này (không phân biệt hoa thường và dấu câu), nên hãy nhập câu tiếng Anh chuẩn.</p><button onclick="addG()">Lưu cấu trúc</button></div>
- ${L.length?`<div class="card set${gdue(g)?' due':''}"><div style="flex:1;min-width:150px"><b>Review & Luyện tập</b><div class="bar sm"><i style="width:${k/L.length*100}%"></i></div><div class="mut">${k}/${L.length} câu đã làm đúng</div>${gSched(g)}</div><button onclick="gstart('my')">${gdue(g)?'Ôn ngay':'Luyện tập'}</button></div>`:''}
+ ${L.length?`<div class="card row${n?' due':''}"><div><b>Review</b><div class="mut">${n?n+' cấu trúc đến hạn ôn':'Chưa có cấu trúc nào đến hạn'}</div></div>${n?`<button onclick="gstart('due')">Review Now</button>`:'<span class="tag">Đã ôn xong</span>'}</div>
+ <div class="card row"><div><b>Practice</b><div class="mut">${L.length} cấu trúc · luyện bất cứ lúc nào, không đổi lịch ôn</div></div><button class="p" onclick="gstart('all')">Practice</button></div>`:''}
  ${L.map(c=>e&&e.id===c.id?`<div class="card"><b>Sửa cấu trúc</b><label>Mặt trước (tiếng Việt)</label><textarea rows="2" oninput="V.ged.v=this.value">${esc(e.v)}</textarea><label>Mặt sau (tiếng Anh)</label><textarea rows="2" oninput="V.ged.e=this.value">${esc(e.e)}</textarea><div class="row" style="justify-content:flex-start;margin-top:10px"><button onclick="saveG()">Lưu thay đổi</button><button class="g" onclick="V.ged=null;render()">Hủy</button></div></div>`
- :`<div class="card row"><div style="flex:1;min-width:0"><b>${esc(c.vi)}</b><div class="mut">${esc(c.en)}</div></div><div><button class="g sm" onclick="editG('${c.id}')">✎ Sửa</button> <button class="g sm" aria-label="Xóa cấu trúc" onclick="delG('${c.id}')">✕</button></div></div>`).join('')}`}
+ :`<div class="card row"><div style="flex:1;min-width:0"><b>${esc(c.vi)}</b><div class="mut">${esc(c.en)}</div><div class="mut">${(c.next||0)<=now?'Đến hạn ôn':'Ôn tới: '+fd(c.next)}</div></div><div><button class="g sm" onclick="editG('${c.id}')">✎ Sửa</button> <button class="g sm" aria-label="Xóa cấu trúc" onclick="delG('${c.id}')">✕</button></div></div>`).join('')}`}
 const gbad=t=>!/[A-Za-z]/.test(t);
-function addG(){const v=$('#gv').value.trim(),e=$('#ge').value.trim();if(!v||!e)return toast('Cần có cả câu tiếng Việt và câu tiếng Anh');if(gbad(e))return toast('Mặt sau cần là câu tiếng Anh');GC().push({id:uid(),vi:v,en:e});save();toast('Đã lưu cấu trúc');render()}
+function addG(){const v=$('#gv').value.trim(),e=$('#ge').value.trim();if(!v||!e)return toast('Cần có cả câu tiếng Việt và câu tiếng Anh');if(gbad(e))return toast('Mặt sau cần là câu tiếng Anh');GC().push({id:uid(),vi:v,en:e,n:0,next:Date.now()});save();toast('Đã lưu cấu trúc');render()}
 function delG(id){if(!confirm('Xóa cấu trúc này?'))return;GC().find(c=>c.id===id).arch=true;V.ged=null;save();render()}
 function editG(id){const c=GC().find(x=>x.id===id);V.ged={id,v:c.vi,e:c.en};render()}
 function saveG(){const d=V.ged,c=GC().find(x=>x.id===d.id),v=d.v.trim(),e=d.e.trim();if(!v||!e)return toast('Cần có cả câu tiếng Việt và câu tiếng Anh');if(gbad(e))return toast('Mặt sau cần là câu tiếng Anh');c.vi=v;c.en=e;V.ged=null;save();toast('Đã lưu thay đổi');render()}
-function gstart(id){const g=GRAMS().find(x=>x.id===id);if(!g||!g.items.length)return toast('Hãy thêm ít nhất 1 cấu trúc');go('gq',{gid:id,q:shuf(g.items.map(x=>x.id)),tries:0,draft:'',fb:'',done:0,flip:0,gave:0,re:{},okSet:{},first:0,total:g.items.length,left:GLIM,wasDue:gdue(g)});gTimerStart()}
+function gstart(mode){const now=Date.now(),L=GC().filter(c=>!c.arch&&(mode==='all'||(c.next||0)<=now));if(!L.length)return toast(mode==='due'?'Chưa có cấu trúc nào đến hạn ôn':'Hãy thêm ít nhất 1 cấu trúc');
+ go('gq',{gid:'my',mode,sched:{},q:shuf(L.map(x=>x.id)),tries:0,draft:'',fb:'',done:0,flip:0,gave:0,re:{},okSet:{},first:0,total:L.length,left:GLIM});gTimerStart()}
+/* Lịch riêng từng cấu trúc (chỉ khi Review): đúng ngay = tăng mức, đúng sau khi sai = giữ mức, hết giờ/xem đáp án = về mức 0, ôn lại sau 1 ngày. Mỗi cấu trúc chỉ tính 1 lần trong lượt */
+function gFail(it){if(V.mode!=='due'||V.sched[it.id])return;V.sched[it.id]=1;const c=GC().find(x=>x.id===it.id);if(c){c.n=0;c.next=Date.now()+D}}
 function gcur(){const g=GRAMS().find(x=>x.id===V.gid);return{g,it:g.items.find(x=>x.id===V.q[0])}}
 function gq(){const{g,it}=gcur();if(!it)return'';const ok=Object.keys(V.okSet).length;
  return`<div class="row top"><button class="g sm" onclick="go('gram')">← Thoát</button><b>${esc(g.vi)}</b><span class="mut" id="gcnt">${ok}/${V.total} câu</span></div><div class="bar"><i id="gbar" style="width:${ok/V.total*100}%"></i></div><div class="row" style="margin:8px 0 2px"><div class="gtbar"><i id="gtbar" style="width:${Math.max(0,100-(Date.now()-(V.t0||Date.now()))/(GLIM*10))}%"></i></div><span id="gtime" class="gtime${V.left<=3?' low':''}">⏱ ${V.left}s</span></div>
@@ -300,18 +302,17 @@ function gCheck(alts){if(V.done)return;const{it}=gcur(),el=$('#gin'),arr=alts||[
  if(alts){const c=gClose(alts,it);if(c){toast('Máy nghe: "'+c.heard+'", tính là đúng ✓');return gPass()}}
  V.tries++;const d=gdiff(txt,it);V.fb=`<b>Chưa đúng, cần làm lại.</b><div>Câu của bạn: ${d.html}</div>${d.miss>0?`<div class="mut">Còn thiếu ${d.miss} từ</div>`:''}`;render()}
 function gReveal(ok){clearInterval(GT);V.done=1;V.flip=1;try{V.rec&&V.rec.abort()}catch{}const f=$('#gfi');if(f)f.classList.add('on');const n=$('#gnext');if(n)n.style.display='';const t=$('#gtag');if(t)t.textContent=ok?'Chính xác! 🎉':'Đáp án';const i=$('#gin');if(i){i.blur();i.disabled=true}const m=$('#gmic');if(m)m.disabled=true;save()}
-function gPass(){const{it}=gcur(),o=GP(V.gid);o.ok[it.id]=(o.ok[it.id]||0)+1;
+function gPass(){const{it}=gcur(),gc=GC().find(x=>x.id===it.id);
+ if(V.mode==='due'&&gc&&!V.sched[it.id]){V.sched[it.id]=1;if(V.tries)gc.next=Date.now()+gap(Math.max(1,gc.n||0))*D;else{gc.n=(gc.n||0)+1;gc.next=Date.now()+gap(gc.n)*D}}
  if(!V.okSet[it.id]){V.okSet[it.id]=1;if(!V.tries&&!V.re[it.id])V.first++}
  const n=Object.keys(V.okSet).length,b=$('#gbar'),c=$('#gcnt');if(b)b.style.width=n/V.total*100+'%';if(c)c.textContent=n+'/'+V.total+' câu';gReveal(1)}
-function gGive(){const{it}=gcur();V.re[it.id]=1;V.gave=1;gReveal(0)}
+function gGive(){const{it}=gcur();gFail(it);V.re[it.id]=1;V.gave=1;gReveal(0)}
 function gNext(){if(!V.done)return;const{it}=gcur();V.q.shift();if(V.gave)V.q.splice(Math.min(1,V.q.length),0,it.id);
  V.tries=0;V.draft='';V.fb='';V.done=0;V.flip=0;V.gave=0;if(!V.q.length)return gFinish();gTimerStart();render()}
-function gFinish(){const id=V.gid,first=V.first,total=V.total,wasDue=V.wasDue,miss=Object.keys(V.re).length,o=GP(id);o.rounds++;
- /* lịch ôn theo cả mẫu câu, cùng mốc với từ vựng: 1, 3, 7, 12, 18, 24, 30 ngày rồi mỗi 30 ngày; luyện sớm hơn hạn thì không đổi lịch */
- if(!o.init){o.init=Date.now();o.rev=0;o.next=o.init+DAYS[0]*D}
- else if(wasDue){o.rev=(o.rev||0)+1;o.last=Date.now();o.next=o.last+(o.rev<DAYS.length?DAYS[o.rev]-DAYS[o.rev-1]:30)*D}
- bump();lg('Hoàn thành Grammar','gram:'+id,{n:total,miss});save();go('gdone',{gid:id,first,total,miss,next:o.next})}
-function gdone(){const g=GRAMS().find(x=>x.id===V.gid);return`<div class="card" style="text-align:center"><div class="emo">${V.first===V.total?'🏆':'🎉'}</div><h1>Hoàn thành!</h1><p class="mut">${esc(g.vi)}</p><p><b>${V.first}/${V.total}</b> câu đúng ngay lần đầu</p>${V.miss?`<p class="mut">${V.miss} câu hết 10 giây, đã được làm lại</p>`:''}<p class="mut">Lần ôn tiếp theo: <b>${gdt(V.next)}</b></p><div class="row" style="justify-content:center"><button onclick="gstart('${g.id}')">Luyện lại</button><button class="g" onclick="go('gram')">Về Grammar</button></div></div>`}
+function gFinish(){const first=V.first,total=V.total,mode=V.mode,miss=Object.keys(V.re).length;
+ bump();lg(mode==='due'?'Hoàn thành Grammar Review':'Hoàn thành Grammar Practice','gram:my',{n:total,miss});save();
+ const nx=GC().filter(c=>!c.arch&&(c.next||0)>Date.now()).map(c=>c.next);go('gdone',{gid:'my',first,total,miss,mode,next:nx.length?Math.min(...nx):0})}
+function gdone(){const g=GRAMS().find(x=>x.id===V.gid);return`<div class="card" style="text-align:center"><div class="emo">${V.first===V.total?'🏆':'🎉'}</div><h1>Hoàn thành!</h1><p class="mut">${esc(g.vi)}</p><p><b>${V.first}/${V.total}</b> câu đúng ngay lần đầu</p>${V.miss?`<p class="mut">${V.miss} câu hết 10 giây, đã được làm lại</p>`:''}${V.mode==='due'?(V.next?`<p class="mut">Cấu trúc tiếp theo đến hạn ôn: <b>${gdt(V.next)}</b></p>`:''):'<p class="mut">Practice không làm thay đổi lịch ôn.</p>'}<div class="row" style="justify-content:center"><button onclick="gstart('all')">Practice thêm</button><button class="g" onclick="go('gram')">Về Grammar</button></div></div>`}
 function gMicUi(){const b=$('#gmic');if(b){b.classList.toggle('on',!!V.listening);b.textContent=V.listening?'⏹':'🎤'}}
 /* Bảng sửa lỗi nhận diện giọng nói hay gặp (chỉ áp dụng khi nói, không áp dụng khi gõ). Thêm dòng mới theo mẫu: [/\bnghe sai\b/g,'từ đúng'] */
 const SPFIX=[[/\bwhat are\b/g,'water'],[/\bboys\b/g,'boils']];
